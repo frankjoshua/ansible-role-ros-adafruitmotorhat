@@ -1,0 +1,38 @@
+---
+- name: Turn on i2c on PI
+  lineinfile:
+    path: /boot/config.txt
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^dtparam=i2c_arm', line: 'dtparam=i2c_arm=on' }
+    - { regexp: '^dtparam=spi', line: 'dtparam=spi=on' }
+  become: yes
+
+- name: Turn on i2c on PI
+  lineinfile:
+    path: /etc/modules
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^i2c-bcm2708', line: 'i2c-bcm2708' }
+    - { regexp: '^i2c-dev', line: 'i2c-dev' }
+  become: yes
+
+- name: Start Adafruit motor hat docker container
+  docker_container:
+    name: ros_adafruit_motor_hat
+    image: "frankjoshua/ros-adafruit-motor-hat"
+    network_mode: "host"
+    restart_policy: "unless-stopped"
+    capabilities:
+      - SYS_RAWIO
+    devices:
+      - "/dev/i2c-0:/dev/i2c-0"
+      - "/dev/i2c-1:/dev/i2c-1"
+      - "/lib/modules:/lib/modules"
+      - "/dev/mem:/dev/mem"
+    privileged: yes
+    env:
+      ROS_MASTER_URI: "{{ ros_master_uri }}"
+      ROS_IP: "{{ ros_ip }}"
